@@ -1,0 +1,9 @@
+FICHA RPG - app para a tela inicial (by: jotaa)
+
+1) Coloque TODOS os arquivos desta pasta em uma hospedagem de sites estaticos (por exemplo Vercel Drop em vercel.com/drop, ou Netlify Drop).
+2) No iPhone, abra o link no Safari (nao no WhatsApp).
+3) Toque em Compartilhar > Adicionar a Tela de Inicio.
+4) Abra pelo icone. Depois da primeira vez funciona sem internet.
+
+Os dados ficam guardados dentro do app da tela inicial. Para trazer personagens de outro lugar, use Config > Importar ficha.
+Para atualizar o app no futuro, troque v1 por v2 em sw.js (ficha-rpg-v1) e envie os arquivos de novo.
