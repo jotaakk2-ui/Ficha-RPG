@@ -97,15 +97,26 @@ textarea{resize:vertical;width:100%}
 .sv{display:flex;align-items:center;gap:8px;margin-top:12px}
 .sv .note{margin:0;font-size:.72rem}.sv .sm{margin-left:0}
 .lock{opacity:.55}
+.hl{display:flex;align-items:center;gap:10px;margin-top:12px}.hl h1{margin:0}
+.ic{width:44px;padding:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px}
+.ic span{display:block;width:20px;height:2px;background:var(--tx);border-radius:2px}
+.dv{align-items:stretch;justify-content:flex-start}
+.dp{background:var(--card);border-right:1px solid var(--line);width:min(300px,84vw);height:100%;overflow:auto;padding:calc(16px + env(safe-area-inset-top)) 16px 16px}
+.dnav{display:flex;flex-direction:column;gap:4px}
+.dnav button{text-align:left;border:0;background:none;color:var(--tx);padding:0 12px;border-radius:10px}
+.dnav button[aria-selected=true]{background:var(--inp);color:var(--ac);font-weight:700}
+#sk{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}#sk .wp{margin:0}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg button[aria-pressed=true]{background:var(--ac);border-color:var(--ac);color:var(--acx);font-weight:700}
+.hd{flex-wrap:wrap}
 footer{text-align:center;font-size:.7rem;color:var(--mut);opacity:.7;padding:24px 0 12px}
 </style>
 </head>
 <body>
 <div class="w">
-<header class="hd"><h1>FICHA RPG</h1><div class="sv"><span id="savest" class="note"></span><button id="savebtn" type="button" class="pri sm">Salvar</button></div></header>
+<header class="hd"><div class="hl"><button id="menubtn" type="button" class="ic" aria-label="Abrir menu"><span></span><span></span><span></span></button><h1>FICHA RPG</h1></div><div class="sv"><span id="savest" class="note"></span><button id="savebtn" type="button" class="pri sm">Salvar</button></div></header>
 
 <div class="cbar"><select id="csel" aria-label="Personagem"></select><button id="cadd" class="pri">+ Novo</button><button id="cdel">Excluir</button></div>
-<nav class="tabs" role="tablist" id="tabs"></nav>
 <div id="warn" class="card" hidden style="border-color:var(--bad)"><b>Atenção:</b> este visualizador (como o do WhatsApp) não guarda os dados. Abra o arquivo no Chrome ou no Safari, ou toque em <b>Salvar</b> e guarde o backup nos Arquivos.</div>
 <div class="tab" id="t-ficha"><section class="card"><h2>Personagem</h2>
 <input id="name" maxlength="60" placeholder="Nome do personagem" aria-label="Nome do personagem"></section>
@@ -121,6 +132,7 @@ footer{text-align:center;font-size:.7rem;color:var(--mut);opacity:.7;padding:24p
 <div class="row" style="margin-top:10px"><label class="l" style="flex:1;width:auto">Ganhar XP<input id="lvadd" type="number" inputmode="numeric" min="0" placeholder="0"></label><button id="lvgo" type="button" class="pri">Adicionar</button></div>
 <p class="note" style="margin:10px 0 0">Cada nível acima do 1 soma +4 PV, +3 SAN e +2 PE máximos.</p></section></div>
 
+<div class="tab" id="t-per" hidden><section class="card"><h2>Perícias</h2><p class="note">Toque em 0, 5, 10 ou 15 para definir o bônus de cada perícia.</p><div id="sk"></div></section></div>
 <div class="tab" id="t-inv" hidden>
 <section class="card"><h2>Inventário <span id="cap" class="chip"></span></h2>
 <p id="capNote" class="note"></p><div id="inv"></div></section>
@@ -183,6 +195,7 @@ footer{text-align:center;font-size:.7rem;color:var(--mut);opacity:.7;padding:24p
 <div class="acts" style="margin-top:10px"><button id="hsave" class="pri">Criar habilidade</button><button id="hcancel" type="button">Cancelar</button></div>
 <p id="hmsg" class="note" style="margin-top:8px" aria-live="polite"></p></div></div>
 <div id="csheet" class="ov" hidden><div id="sheetbody" class="mdl" role="dialog" aria-modal="true"></div></div>
+<div id="drw" class="ov dv" hidden><div class="dp" role="dialog" aria-modal="true" aria-label="Menu"><div class="wh" style="margin-bottom:12px"><b style="flex:1;letter-spacing:.14em">MENU</b><button id="dx" type="button" class="sm" style="margin:0">Fechar</button></div><nav id="tabs" class="dnav" role="tablist"></nav></div></div>
 <footer>by: jotaa</footer>
 </div>
 
@@ -195,17 +208,19 @@ var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'
 var int=function(v,a,b,d){v=Math.round(Number(v));return isNaN(v)?d:Math.min(b,Math.max(a,v))};
 var uid=function(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)};
 var editId=null;
+var SKILLS=[['atletismo','Atletismo','Correr, saltar e escalar.'],['furtividade','Furtividade','Agir sem fazer barulho.'],['investigacao','Investigação','Encontrar pistas e segredos.'],['medicina','Medicina','Tratar ferimentos.'],['tecnologia','Tecnologia','Consertar e hackear dispositivos.'],['pontaria','Pontaria','Acertar ataques à distância.'],['luta','Luta','Combate corpo a corpo.'],['intimidacao','Intimidação','Colocar medo nos inimigos.'],['percepcao','Percepção','Notar perigos e detalhes.'],['persuasao','Persuasão','Convencer outras pessoas.']];
 var LV={hp:4,san:3,pe:2};
 function syncLv(c,on){var t=on?c.lvl:1,d=t-(c.lb||1);if(!d)return;['hp','san','pe'].forEach(function(k){var x=d*LV[k];c[k].m=Math.max(1,c[k].m+x);c[k].c=Math.min(c[k].m,Math.max(0,c[k].c+(x>0?x:0)))});c.lb=t}
 function maxes(n){var lv=n>=99?20:Math.floor(n/5),st=Math.max(0,lv-1);return{hp:20+st*4,san:12+st*3,pe:2+st*2}}
 function setNex(v){var o=maxes(S.nex);S.nex=int(v,0,100,S.nex);var n=maxes(S.nex);['hp','san','pe'].forEach(function(k){var d=n[k]-o[k];S[k].m=Math.max(1,S[k].m+d);S[k].c=Math.min(S[k].m,Math.max(0,S[k].c+(d>0?d:0)))})}
 
-function def(){return{name:'',hp:{c:20,m:20},san:{c:12,m:12},pe:{c:2,m:2},lb:1,nex:5,bag:'none',items:[],weapons:[],abilities:[],lvl:1,xp:0,xpn:100,id:uid()}}
+function def(){return{name:'',hp:{c:20,m:20},san:{c:12,m:12},pe:{c:2,m:2},lb:1,nex:5,bag:'none',items:[],weapons:[],abilities:[],lvl:1,xp:0,xpn:100,skills:(function(){var o={};SKILLS.forEach(function(k){o[k[0]]=0});return o})(),id:uid()}}
 function clean(r){
   var d=def();if(!r||typeof r!=='object')return d;
   d.id=typeof r.id==='string'&&r.id?r.id.slice(0,30):d.id;d.name=String(r.name||'').slice(0,60);d.nex=int(r.nex,0,100,5);
   var m=maxes(d.nex);['hp','san','pe'].forEach(function(k){var o=r[k]||{},mx=int(o.m,1,9999,m[k]);d[k]={m:mx,c:int(o.c,0,mx,mx)}});
   d.bag=BAGS[r.bag]?r.bag:'none';
+  d.skills={};SKILLS.forEach(function(k){var v=Number((r.skills||{})[k[0]]);d.skills[k[0]]=[0,5,10,15].indexOf(v)>-1?v:0});
   d.lvl=int(r.lvl,1,99,1);d.lb=int(r.lb,1,99,1);d.xp=int(r.xp,0,999999,0);d.xpn=int(r.xpn,1,999999,100);
   d.abilities=(Array.isArray(r.abilities)?r.abilities:[]).filter(function(a){return a&&typeof a==='object'}).slice(0,100).map(function(a){
     return{id:typeof a.id==='string'&&a.id?a.id.slice(0,30):uid(),name:String(a.name||'Habilidade').slice(0,60),desc:String(a.desc||'').slice(0,600),cost:String(a.cost||'').slice(0,30),lvl:int(a.lvl,1,99,1)}});
@@ -384,7 +399,7 @@ $('#file').onchange=function(){
   fr.onerror=function(){$('#msg').textContent='Não foi possível ler o arquivo.'};
   fr.readAsText(f)};
 
-function renderAll(){editIt=null;paintLvl();renderHab();applyTheme();renderCreatures();renderChars();$('#name').value=S.name;paint();renderInv();renderBags();renderW()}
+function renderAll(){editIt=null;renderSk();paintLvl();renderHab();applyTheme();renderCreatures();renderChars();$('#name').value=S.name;paint();renderInv();renderBags();renderW()}
 var cEdit=null,cImg='',pendC=null,cBack=false;
 function cfind(id){return G.creatures.filter(function(c){return c.id===id})[0]}
 function preview(){$('#cprev').innerHTML=cImg?'<img class="cp" src="'+cImg+'" alt="">':''}
@@ -534,12 +549,22 @@ $('#hl').addEventListener('click',function(e){
     $('#hsave').textContent='Salvar alterações';$('#htitle').textContent='Editar habilidade';$('#hmsg').textContent='';renderHab();openH()}
   else if(pendH===id){pendH=null;S.abilities=S.abilities.filter(function(x){return x.id!==id});save();renderHab()}
   else{pendH=id;renderHab();setTimeout(function(){if(pendH===id){pendH=null;renderHab()}},4000)}});
-var TABS=[['ficha','Ficha'],['inv','Inventário'],['bag','Mochila'],['arm','Arsenal'],['hab','Habilidades'],['cmb','Combate'],['cfg','Config']];
+function openD(){$('#drw').hidden=false}
+function closeD(){$('#drw').hidden=true}
+$('#menubtn').onclick=openD;$('#dx').onclick=closeD;
+$('#drw').addEventListener('click',function(e){if(e.target===this)closeD()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('#drw').hidden)closeD()});
+function renderSk(){
+  $('#sk').innerHTML=SKILLS.map(function(k){var v=S.skills[k[0]];
+    return '<div class="wp" data-k="'+k[0]+'"><div class="wh"><b>'+k[1]+'</b><span class="chip">'+(v?'+'+v:'0')+'</span></div><p class="note" style="margin:0 0 10px">'+k[2]+'</p>'+
+    '<div class="seg">'+[0,5,10,15].map(function(n){return '<button data-v="'+n+'" aria-pressed="'+(v===n)+'">'+n+'</button>'}).join('')+'</div></div>'}).join('')}
+$('#sk').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;S.skills[b.closest('.wp').dataset.k]=+b.dataset.v;save();renderSk()});
+var TABS=[['ficha','Ficha'],['per','Perícias'],['inv','Inventário'],['bag','Mochila'],['arm','Arsenal'],['hab','Habilidades'],['cmb','Combate'],['cfg','Config']];
 $('#tabs').innerHTML=TABS.map(function(t,i){return '<button role="tab" data-t="'+t[0]+'" aria-selected="'+(i===0)+'">'+t[1]+'</button>'}).join('');
 $('#tabs').addEventListener('click',function(e){
   var b=e.target.closest('button');if(!b)return;
   document.querySelectorAll('.tab').forEach(function(d){d.hidden=d.id!=='t-'+b.dataset.t});
-  document.querySelectorAll('#tabs button').forEach(function(x){x.setAttribute('aria-selected',x===b)})});
+  document.querySelectorAll('#tabs button').forEach(function(x){x.setAttribute('aria-selected',x===b)});closeD()});
 resetForm();renderAll();migrateImgs();persist();
 var nv=window.navigator;if(nv&&nv.serviceWorker&&/^https?:/.test(location.protocol))nv.serviceWorker.register('sw.js').catch(function(){});
 function storageOK(){try{localStorage.setItem('_t','1');var v=localStorage.getItem('_t')==='1';localStorage.removeItem('_t');return v}catch(e){return false}}

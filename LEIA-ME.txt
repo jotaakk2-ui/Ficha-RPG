@@ -6,4 +6,4 @@ FICHA RPG - app para a tela inicial (by: jotaa)
 4) Abra pelo icone. Depois da primeira vez funciona sem internet.
 
 Os dados ficam guardados dentro do app da tela inicial. Para trazer personagens de outro lugar, use Config > Importar ficha.
-Para atualizar o app no futuro, troque o numero da versao em sw.js (ficha-rpg-v4 para v5) e envie os arquivos de novo.
+Para atualizar o app no futuro, troque o numero da versao em sw.js (ficha-rpg-v5 para v6) e envie os arquivos de novo.
